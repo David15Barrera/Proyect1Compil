@@ -1,0 +1,266 @@
+package reporte.analisis.sintactico;
+
+import java_cup.runtime.Symbol;
+import java.util.ArrayList;
+import reporte.analisis.lexico.LexerReporte;
+import reporte.DatosReporte;
+
+parser code
+{:
+
+    private ArrayList<String> errores = new ArrayList<>();
+    private DatosReporte dtsRep;
+    private String nuevaCadena = "";
+    private String ultimoID = "";
+    private String cadenaValor = "";
+    private String cadenaHTML = "";
+    private String cadena_h1 = "";
+    private String etiquetaValor = "";
+    public void setDtsRep(DatosReporte dtsRep) {
+        this.dtsRep = dtsRep;
+    }
+
+    public parser(LexerReporte lexer) {
+            super(lexer);
+    }
+
+    public void setErrores(ArrayList<String> errores) {
+        this.errores = errores;
+    }
+  
+    public void syntax_error(Symbol s) {
+        errores.add("Error Sintactico: Lexema: " + String.valueOf(s.value) + " | Linea: " +  s.left + " | columna: " +  s.right);
+    }
+
+:};
+
+
+terminal SCORE, CLASES, VARIABLES, METODOS, COMENTARIOS, NOMBRE, TIPO, FUNCION, PARAMETROS, TEXTO, RESULT, INTEGER,
+        STRING, HTML, H1, H2, TABLE, FOR, ITERADOR, HASTA, TR, TD, TH, BR, DECIMAL, SUMA, RESTA,
+        MULTIPLICACION, DIVISION, PARENTESIS_A, PARENTESIS_C, PUNTO_COMA, DOS_PUNTOS, COMA, SIGNO_IGUAL, ETIQUETA_ABRIR,
+        ETIQUETA_FIN, ETIQUETA_CERRAR, CORCHETE_A, CORCHETE_C, DOLAR, PUNTO, ERROR;
+
+terminal String ID, CADENA;
+
+terminal Integer ENTERO;
+
+non terminal s, sintax_html, body, etiqueta_table, cuerpo_table, fila, fila_th, fila_td,etiqueta_h,
+             var, asignacion, var_jison, definicion, var_integer, var_string, identificador,
+             columna, etiqueta_for, for_table ;
+
+non terminal Integer expresion, expresion_string, valor;
+
+non terminal String c, variable_html,  variable_h1, identificador_h1;
+
+precedence left SUMA, RESTA;
+precedence left MULTIPLICACION, DIVISION;
+
+start with s;
+
+s ::= 
+    var sintax_html 
+; 
+
+sintax_html ::=
+    ETIQUETA_ABRIR HTML ETIQUETA_CERRAR body ETIQUETA_FIN HTML ETIQUETA_CERRAR
+;
+
+variable_html ::=
+    variable_html identificador_h1:cad {:RESULT = cad; cadena_h1 = cadena_h1 + " " + cad; etiquetaValor = etiquetaValor + " " + cad;:}
+    | variable_html variable_h1:var {:RESULT = var; cadena_h1 = cadena_h1 + " " + var;:}
+    |
+;
+
+identificador_h1 ::=
+    ID:id {:RESULT = id;:}
+    | expresion:e {:RESULT = String.valueOf(e);:}
+    | SUMA:e {:RESULT = String.valueOf(e);:}
+    | RESTA:e {:RESULT = String.valueOf(e);:}
+    | MULTIPLICACION:e {:RESULT = String.valueOf(e);:}
+    | DIVISION:e {:RESULT = String.valueOf(e);:}
+    | DOS_PUNTOS:e {:RESULT = String.valueOf(e);:}
+    | COMA:e {:RESULT = String.valueOf(e);:}
+    | PUNTO_COMA:e {:RESULT = String.valueOf(e);:}
+    | SCORE:e {:RESULT = String.valueOf(e);:}
+    | CLASES:e {:RESULT = String.valueOf(e);:}
+    | VARIABLES:e {:RESULT = String.valueOf(e);:}
+    | METODOS:e {:RESULT = String.valueOf(e);:}
+    | COMENTARIOS:e {:RESULT = String.valueOf(e);:}
+    | NOMBRE:e {:RESULT = String.valueOf(e);:}
+    | TIPO:e {:RESULT = String.valueOf(e);:}
+    | FUNCION:e {:RESULT = String.valueOf(e);:}
+    | PARAMETROS:e {:RESULT = String.valueOf(e);:}
+    | TEXTO:e {:RESULT = String.valueOf(e);:}
+    | SIGNO_IGUAL:e {:RESULT = String.valueOf(e);:}
+    | RESULT:e {:RESULT = String.valueOf(e);:}
+    | CORCHETE_A:e {:RESULT = String.valueOf(e);:}
+    | CORCHETE_C:e {:RESULT = String.valueOf(e);:}
+    | ETIQUETA_ABRIR BR ETIQUETA_CERRAR {:RESULT = "<br>";:}
+;
+
+variable_h1 ::=
+    DOLAR PARENTESIS_A ID:id PARENTESIS_C DOLAR {:RESULT = String.valueOf(dtsRep.obtenerID(id, idleft)); etiquetaValor = etiquetaValor + " $$(" + id + ")$$"; dtsRep.setEtiquetaValor(id); :}
+    | DOLAR PARENTESIS_A var_jison:var PARENTESIS_C DOLAR {:RESULT = String.valueOf(var);:}    
+;
+
+body ::=
+    body etiqueta_h 
+    | body etiqueta_table 
+    | body etiqueta_for 
+    |
+    | error ETIQUETA_CERRAR
+;
+
+etiqueta_for ::=
+    ETIQUETA_ABRIR FOR ITERADOR DOS_PUNTOS ID:inicio HASTA DOS_PUNTOS ID:fin  PUNTO_COMA ETIQUETA_CERRAR {:try {int i = Integer.parseInt(dtsRep.obtenerID(inicio, inicioleft)); int f = Integer.parseInt(dtsRep.obtenerID(fin, finleft)); dtsRep.obtenerSimboloFor(inicio); dtsRep.iniciarFor(i, f); } catch(Exception e){errores.add("Error al obtener valor de ID en Linea: " + inicioleft);}:}
+    body
+    ETIQUETA_FIN FOR ETIQUETA_CERRAR {:dtsRep.recorrerFor();:}
+;
+
+etiqueta_table ::=
+    ETIQUETA_ABRIR TABLE ETIQUETA_CERRAR {:dtsRep.agregarEtiqueta("<table border = \"1\" class=\"table\">");:}
+    cuerpo_table
+    ETIQUETA_FIN TABLE ETIQUETA_CERRAR {:dtsRep.agregarEtiqueta("</table>");:}
+;
+
+cuerpo_table ::=
+    cuerpo_table etiqueta_h 
+    | cuerpo_table columna 
+    | cuerpo_table for_table 
+    |
+;
+
+for_table ::=
+    ETIQUETA_ABRIR FOR ITERADOR DOS_PUNTOS ID:inicio HASTA DOS_PUNTOS ID:fin  PUNTO_COMA ETIQUETA_CERRAR {:try{ int i = Integer.parseInt(dtsRep.obtenerID(inicio, inicioleft)); int f = Integer.parseInt(dtsRep.obtenerID(fin, finleft)); dtsRep.obtenerSimboloFor(inicio); dtsRep.iniciarFor(i, f); } catch(Exception e){errores.add("Error al obtener valor de ID en Linea: " + inicioleft);}:}
+    cuerpo_table
+    ETIQUETA_FIN FOR ETIQUETA_CERRAR {:dtsRep.recorrerFor();:}
+;
+
+columna ::=
+    ETIQUETA_ABRIR TR ETIQUETA_CERRAR {:dtsRep.agregarEtiqueta("<tr>");:}
+    fila  
+    ETIQUETA_FIN TR ETIQUETA_CERRAR {:dtsRep.agregarEtiqueta("</tr>");:}
+;
+
+fila ::=
+    fila fila_th
+    | fila fila_td
+    |
+;
+
+fila_th ::=
+    ETIQUETA_ABRIR TH ETIQUETA_CERRAR variable_html:var ETIQUETA_FIN TH ETIQUETA_CERRAR {:dtsRep.setEtiquetaValor(etiquetaValor); etiquetaValor = ""; dtsRep.agregarFilaTH(cadena_h1); cadena_h1 = "";:}
+;
+
+fila_td ::=
+    ETIQUETA_ABRIR TD ETIQUETA_CERRAR variable_html:var ETIQUETA_FIN TD ETIQUETA_CERRAR {:dtsRep.setEtiquetaValor(etiquetaValor); etiquetaValor = ""; dtsRep.agregarFilaTD(cadena_h1); cadena_h1 = "";:}
+;
+
+
+etiqueta_h ::=
+    ETIQUETA_ABRIR H1 ETIQUETA_CERRAR variable_html:var ETIQUETA_FIN H1 ETIQUETA_CERRAR  {:dtsRep.setEtiquetaValor(etiquetaValor); etiquetaValor = ""; dtsRep.agregarH1(cadena_h1); cadena_h1 = "";:}
+    | ETIQUETA_ABRIR H2 ETIQUETA_CERRAR variable_html:var ETIQUETA_FIN H2 ETIQUETA_CERRAR {:dtsRep.setEtiquetaValor(etiquetaValor); etiquetaValor = ""; dtsRep.agregarH2(cadena_h1); cadena_h1 = "";:}
+;
+
+var ::=
+      var definicion
+      | var asignacion
+      | 
+      | error PUNTO_COMA
+;
+
+asignacion ::=
+    ID:id SIGNO_IGUAL expresion:e PUNTO_COMA {:dtsRep.asignarID(id, String.valueOf(e), idleft);:}
+    | ID:id SIGNO_IGUAL CADENA:cad c PUNTO_COMA {:dtsRep.asignarID(id, dtsRep.convertirCadena(cad, nuevaCadena), idleft); nuevaCadena = "";:}
+    | ID:id SIGNO_IGUAL ID:asig PUNTO_COMA {:dtsRep.asignarID(id, dtsRep.obtenerID(asig, asigleft), idleft);:}
+    | ID:id SIGNO_IGUAL var_jison:var PUNTO_COMA {:dtsRep.asignarID(id, String.valueOf(var), idleft);:}
+;
+
+var_jison ::=
+    RESULT PUNTO SCORE:val {: RESULT = dtsRep.obtenerValorJISON("Score", 0, "score", valleft); etiquetaValor = etiquetaValor + " $$(RESULT.Score)$$";:}
+    | RESULT PUNTO CLASES
+    | RESULT PUNTO CLASES CORCHETE_A valor:val CORCHETE_C {:RESULT = dtsRep.obtenerValorJISON("Clases", val, null, valleft);:}
+    | RESULT PUNTO CLASES CORCHETE_A valor:val CORCHETE_C PUNTO NOMBRE {:RESULT = dtsRep.obtenerValorJISON("Clases", val, "Nombre", valleft); etiquetaValor = etiquetaValor + " $$(RESULT.Clases[" + ultimoID +"].Nombre)$$";:}
+    | RESULT PUNTO VARIABLES
+    | RESULT PUNTO VARIABLES CORCHETE_A valor:val CORCHETE_C {:RESULT = dtsRep.obtenerValorJISON("Variables", val, null, valleft);:}
+    | RESULT PUNTO VARIABLES CORCHETE_A valor:val CORCHETE_C PUNTO NOMBRE {:RESULT = dtsRep.obtenerValorJISON("Variables", val, "Nombre", valleft); etiquetaValor = etiquetaValor + " $$(RESULT.Variables[" + ultimoID +"].Nombre)$$";:}
+    | RESULT PUNTO VARIABLES CORCHETE_A valor:val CORCHETE_C PUNTO TIPO {:RESULT = dtsRep.obtenerValorJISON("Variables", val, "Tipo", valleft); etiquetaValor = etiquetaValor + " $$(RESULT.Variables[" + ultimoID +"].Tipo)$$";:}
+    | RESULT PUNTO VARIABLES CORCHETE_A valor:val CORCHETE_C PUNTO FUNCION {:RESULT = dtsRep.obtenerValorJISON("Variables", val, "Funcion", valleft); etiquetaValor = etiquetaValor + " $$(RESULT.Variables[" + ultimoID +"].Funcion)$$";:}
+    | RESULT PUNTO METODOS
+    | RESULT PUNTO METODOS CORCHETE_A valor:val CORCHETE_C {:RESULT = dtsRep.obtenerValorJISON("Metodos", val, null, valleft);:}
+    | RESULT PUNTO METODOS CORCHETE_A valor:val CORCHETE_C PUNTO NOMBRE {:RESULT = dtsRep.obtenerValorJISON("Metodos", val, "Nombre", valleft); etiquetaValor = etiquetaValor + " $$(RESULT.Metodos[" + ultimoID +"].Nombre)$$";:}
+    | RESULT PUNTO METODOS CORCHETE_A valor:val CORCHETE_C PUNTO TIPO {:RESULT = dtsRep.obtenerValorJISON("Metodos", val, "Tipo", valleft);etiquetaValor = etiquetaValor + " $$(RESULT.Metodos[" + ultimoID +"].Tipo)$$";:}
+    | RESULT PUNTO METODOS CORCHETE_A valor:val CORCHETE_C PUNTO PARAMETROS {:RESULT = dtsRep.obtenerValorJISON("Metodos", val, "Parametros", valleft); etiquetaValor = etiquetaValor + " $$(RESULT.Metodos[" + ultimoID +"].Parametros)$$";:}
+    | RESULT PUNTO COMENTARIOS
+    | RESULT PUNTO COMENTARIOS CORCHETE_A valor:val CORCHETE_C {:RESULT = dtsRep.obtenerValorJISON("Comentarios", val, null, valleft);:}
+    | RESULT PUNTO COMENTARIOS CORCHETE_A valor:val CORCHETE_C PUNTO TEXTO {:RESULT = dtsRep.obtenerValorJISON("Comentarios", val, "Texto", valleft); etiquetaValor = etiquetaValor + " $$(RESULT.Comentarios[" + ultimoID +"].Texto)$$";:}
+;
+
+valor ::=
+    ID:e {:try{ RESULT = Integer.parseInt(dtsRep.obtenerID(e, eleft)); ultimoID = e;}catch(Exception ex){errores.add("Error al obtener valor de ID: "+ e +" en Linea: " + eleft); RESULT = 0;}:}
+    | ENTERO:e {:RESULT = e; ultimoID = String.valueOf(e);:}
+;
+
+definicion ::=
+    var_integer
+    | var_string
+;
+
+var_integer ::=
+    INTEGER identificador PUNTO_COMA {:dtsRep.agregarSimbolosID("Integer");:}
+    | INTEGER ID:id SIGNO_IGUAL expresion:e PUNTO_COMA {:dtsRep.agregarSimboloDeclaracion(id, "Integer", String.valueOf(e), idleft, idright);:}
+    | INTEGER ID:id SIGNO_IGUAL var_jison:var PUNTO_COMA {:dtsRep.agregarSimboloDeclaracion(id, "Integer", String.valueOf(var), idleft, idright);:}
+;
+
+var_string ::=
+    STRING identificador PUNTO_COMA {:dtsRep.agregarSimbolosID("String");:}
+    | STRING ID:id SIGNO_IGUAL CADENA:cad c PUNTO_COMA {:dtsRep.agregarSimboloDeclaracion(id, "String",dtsRep.convertirCadena(cad, nuevaCadena), idleft, idright); nuevaCadena = "";:}
+    | STRING ID:id SIGNO_IGUAL var_jison:var PUNTO_COMA {:dtsRep.agregarSimboloDeclaracion(id, "String", String.valueOf(var), idleft, idright);:}
+;
+
+c ::= 
+    c SUMA CADENA:cad {:nuevaCadena = nuevaCadena  + cad.substring(1,cad.length()-1);:}
+    | c SUMA expresion_string:e {:nuevaCadena = nuevaCadena  +e;:}
+    | c SUMA ID:id {:nuevaCadena = nuevaCadena + dtsRep.obtenerID(id, idleft);:}
+    | c SUMA var_jison:var {:nuevaCadena = nuevaCadena  + String.valueOf(var);:}
+    | 
+;
+
+identificador ::=
+        ID:e {:dtsRep.agregarID(e, eleft, eright);:}
+        | identificador COMA ID:e {:dtsRep.agregarID(e,eleft, eright);:}  
+;
+
+expresion ::=
+           ENTERO:n {: RESULT = n; :}
+        | expresion:e1 SUMA:o expresion:e2
+                    {: RESULT = e1 + e2; :}
+        | expresion:e1 RESTA:o expresion:e2
+                    {: RESULT = e1 - e2; :}
+        | expresion:e1 MULTIPLICACION:o expresion:e2
+                    {: RESULT = e1 * e2; :}
+        | expresion:e1 DIVISION:o expresion:e2
+                    {: RESULT = e1 / e2;:}
+        | RESTA expresion:e 
+                    {:RESULT = 0 - e;:}
+        | PARENTESIS_A expresion:e PARENTESIS_C
+                    {:RESULT = e;:}
+;
+
+expresion_string ::=
+           ENTERO:n {: RESULT = n; :}
+        | expresion_string:e1 SUMA:o expresion_string:e2
+                    {: RESULT = e1 + e2; :}
+        | expresion_string:e1 RESTA:o expresion_string:e2
+                    {: RESULT = e1 - e2; :}
+        | expresion_string:e1 MULTIPLICACION:o expresion_string:e2
+                    {: RESULT = e1 * e2; :}
+        | expresion_string:e1 DIVISION:o expresion_string:e2
+                    {: RESULT = e1 / e2;:}
+        | RESTA expresion_string:e
+                    {:RESULT = 0 - e;:}
+        | PARENTESIS_A expresion_string:e PARENTESIS_C
+                    {:RESULT = e;:}
+;
+
+

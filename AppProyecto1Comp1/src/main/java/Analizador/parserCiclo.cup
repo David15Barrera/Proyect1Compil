@@ -1,0 +1,191 @@
+
+package Analizador;
+
+import java_cup.runtime.Symbol;
+import java.util.ArrayList;
+import reporte.analisis.lexico.LexerReporte;
+import reporte.DatosReporte;
+
+parser code
+{:
+
+    private ArrayList<String> errores = new ArrayList<>();
+    private DatosReporte dtsRep;
+    private String nuevaCadena = "";
+    private int etiquetas = 0;
+    private String ultimoID = "";
+    private String cadena_h1 = "";
+    private String etiquetaValor = "";
+
+    public void setDtsRep(DatosReporte dtsRep) {
+        this.dtsRep = dtsRep;
+    }
+
+    public AnalizadorCiclo(LexerCiclo lexer) {
+            super(lexer);
+    }
+
+    public void setErrores(ArrayList<String> errores) {
+        this.errores = errores;
+    }
+  
+    public void syntax_error(Symbol s) {
+        errores.add("Error Sintactico Ciclo: Lexema: " + String.valueOf(s.value) + " | Linea: " +  s.left + " | columna: " +  s.right);
+    }
+
+:};
+
+
+terminal INICIO, SCORE, CLASES, VARIABLES, METODOS, COMENTARIOS, NOMBRE, TIPO, FUNCION, PARAMETROS, TEXTO, H1, H2, 
+        TABLE, TR, TD, TH, BR, DECIMAL, SUMA, RESTA, MULTIPLICACION, DIVISION, ETIQUETA_ABRIR, 
+        PARENTESIS_A, PARENTESIS_C, ETIQUETA_FIN, ETIQUETA_CERRAR, CORCHETE_A, CORCHETE_C, DOS_PUNTOS, COMA, SIGNO_IGUAL, PUNTO,
+        PUNTO_COMA, DOLAR, RESULT, ERROR;
+
+terminal String ID, CADENA;
+
+terminal Integer ENTERO;
+
+non terminal s, s1, body, etiqueta_table, columna, fila, fila_th, fila_td, etiqueta_h, var_jison;
+
+non terminal Integer  expresion_string, valor;
+
+non terminal String c, variable_h1, variable_html, identificador_h1;
+
+precedence left SUMA, RESTA;
+precedence left MULTIPLICACION, DIVISION;
+
+start with s;
+
+s ::= 
+    INICIO body {:dtsRep.aumentarID();:}     
+    s1 
+; 
+
+s1 ::= 
+    s1 INICIO body {:dtsRep.aumentarID();:}
+    | 
+;
+
+variable_html ::=
+    variable_html identificador_h1:cad {:RESULT = cad; cadena_h1 = cadena_h1 + " " + cad; etiquetaValor = etiquetaValor + "" + cad;:}
+    | variable_html variable_h1:var {:RESULT = var; cadena_h1 = cadena_h1 + " " + var;:}
+    |
+;
+
+identificador_h1 ::=
+    ID:id {:RESULT = id;:}
+    | expresion_string:e {:RESULT = String.valueOf(e);:}
+    | SUMA:e {:RESULT = String.valueOf(e);:}
+    | RESTA:e {:RESULT = String.valueOf(e);:}
+    | MULTIPLICACION:e {:RESULT = String.valueOf(e);:}
+    | DIVISION:e {:RESULT = String.valueOf(e);:}
+    | DOS_PUNTOS:e {:RESULT = String.valueOf(e);:}
+    | COMA:e {:RESULT = String.valueOf(e);:}
+    | PUNTO_COMA:e {:RESULT = String.valueOf(e);:}
+    | SCORE:e {:RESULT = String.valueOf(e);:}
+    | CLASES:e {:RESULT = String.valueOf(e);:}
+    | VARIABLES:e {:RESULT = String.valueOf(e);:}
+    | METODOS:e {:RESULT = String.valueOf(e);:}
+    | COMENTARIOS:e {:RESULT = String.valueOf(e);:}
+    | NOMBRE:e {:RESULT = String.valueOf(e);:}
+    | TIPO:e {:RESULT = String.valueOf(e);:}
+    | FUNCION:e {:RESULT = String.valueOf(e);:}
+    | PARAMETROS:e {:RESULT = String.valueOf(e);:}
+    | TEXTO:e {:RESULT = String.valueOf(e);:}
+    | SIGNO_IGUAL:e {:RESULT = String.valueOf(e);:}
+    | RESULT:e {:RESULT = String.valueOf(e);:}
+    | CORCHETE_A:e {:RESULT = String.valueOf(e);:}
+    | CORCHETE_C:e {:RESULT = String.valueOf(e);:}
+    | ETIQUETA_ABRIR BR ETIQUETA_CERRAR {:RESULT = "<br>";:}
+;
+
+
+variable_h1 ::=
+    DOLAR PARENTESIS_A ID:id PARENTESIS_C DOLAR {:RESULT = String.valueOf(dtsRep.obtenerID(id, idleft)); etiquetaValor = etiquetaValor + " " + id; dtsRep.setEtiquetaValor(id); :}
+    | DOLAR PARENTESIS_A var_jison:var PARENTESIS_C DOLAR {:RESULT = String.valueOf(var);:}    
+;
+
+body ::=
+    body etiqueta_h 
+    | body etiqueta_table 
+    | body columna
+    | 
+;
+
+etiqueta_table ::=
+    ETIQUETA_ABRIR TABLE ETIQUETA_CERRAR {:dtsRep.agregarEtiqueta("<table>");:}
+    body
+    ETIQUETA_FIN TABLE ETIQUETA_CERRAR {:dtsRep.agregarEtiqueta("</table>");:}
+;
+
+columna ::=
+    ETIQUETA_ABRIR TR ETIQUETA_CERRAR {:dtsRep.agregarEtiqueta("<tr>");:}
+    fila  
+    ETIQUETA_FIN TR ETIQUETA_CERRAR {:dtsRep.agregarEtiqueta("</tr>");:}
+;
+
+fila ::=
+    fila fila_th
+    | fila fila_td
+    |
+;
+
+fila_th ::=
+    ETIQUETA_ABRIR TH ETIQUETA_CERRAR variable_html:var ETIQUETA_FIN TH ETIQUETA_CERRAR {:dtsRep.setEtiquetaValor(etiquetaValor); etiquetaValor = ""; dtsRep.agregarFilaTH(cadena_h1); cadena_h1 = "";:}
+;
+
+fila_td ::=
+    ETIQUETA_ABRIR TD ETIQUETA_CERRAR variable_html:var ETIQUETA_FIN TD ETIQUETA_CERRAR {:dtsRep.setEtiquetaValor(etiquetaValor); etiquetaValor = ""; dtsRep.agregarFilaTD(cadena_h1); cadena_h1 = "";:}
+;
+
+
+etiqueta_h ::=
+    ETIQUETA_ABRIR H1 ETIQUETA_CERRAR variable_html:var ETIQUETA_FIN H1 ETIQUETA_CERRAR  {:dtsRep.setEtiquetaValor(etiquetaValor); etiquetaValor = ""; dtsRep.agregarH1(cadena_h1); cadena_h1 = "";:}
+    | ETIQUETA_ABRIR H2 ETIQUETA_CERRAR variable_html:var ETIQUETA_FIN H2 ETIQUETA_CERRAR {:dtsRep.setEtiquetaValor(etiquetaValor); etiquetaValor = ""; dtsRep.agregarH2(cadena_h1); cadena_h1 = "";:}
+;
+
+
+var_jison ::=
+    RESULT PUNTO SCORE:val {: RESULT = dtsRep.obtenerValorJISON("Score", 0, "score", valleft); dtsRep.setEtiquetaValor("RESULT.Score");:}
+    | RESULT PUNTO CLASES
+    | RESULT PUNTO CLASES CORCHETE_A valor:val CORCHETE_C {:RESULT = dtsRep.obtenerValorJISON("Clases", val, null, valleft);:}
+    | RESULT PUNTO CLASES CORCHETE_A valor:val CORCHETE_C PUNTO NOMBRE {:RESULT = dtsRep.obtenerValorJISON("Clases", val, "Nombre", valleft);:}
+    | RESULT PUNTO VARIABLES
+    | RESULT PUNTO VARIABLES CORCHETE_A valor:val CORCHETE_C {:RESULT = dtsRep.obtenerValorJISON("Variables", val, null, valleft);:}
+    | RESULT PUNTO VARIABLES CORCHETE_A valor:val CORCHETE_C PUNTO NOMBRE {:RESULT = dtsRep.obtenerValorJISON("Variables", val, "Nombre", valleft);:}
+    | RESULT PUNTO VARIABLES CORCHETE_A valor:val CORCHETE_C PUNTO TIPO {:RESULT = dtsRep.obtenerValorJISON("Variables", val, "Tipo", valleft);:}
+    | RESULT PUNTO VARIABLES CORCHETE_A valor:val CORCHETE_C PUNTO FUNCION {:RESULT = dtsRep.obtenerValorJISON("Variables", val, "Funcion", valleft); dtsRep.setEtiquetaValor("RESULT.Variables[" + ultimoID +"].Funcion");:}
+    | RESULT PUNTO METODOS
+    | RESULT PUNTO METODOS CORCHETE_A valor:val CORCHETE_C {:RESULT = dtsRep.obtenerValorJISON("Metodos", val, null, valleft);:}
+    | RESULT PUNTO METODOS CORCHETE_A valor:val CORCHETE_C PUNTO NOMBRE {:RESULT = dtsRep.obtenerValorJISON("Metodos", val, "Nombre", valleft); dtsRep.setEtiquetaValor("RESULT.Metodos[" + ultimoID +"].Nombre");:}
+    | RESULT PUNTO METODOS CORCHETE_A valor:val CORCHETE_C PUNTO TIPO {:RESULT = dtsRep.obtenerValorJISON("Metodos", val, "Tipo", valleft); dtsRep.setEtiquetaValor("RESULT.Metodos[" + ultimoID +"].Tipo");:}
+    | RESULT PUNTO METODOS CORCHETE_A valor:val CORCHETE_C PUNTO PARAMETROS {:RESULT = dtsRep.obtenerValorJISON("Metodos", val, "Parametros", valleft); dtsRep.setEtiquetaValor("RESULT.Metodos[" + ultimoID +"].Parametros");:}
+    | RESULT PUNTO COMENTARIOS
+    | RESULT PUNTO COMENTARIOS CORCHETE_A valor:val CORCHETE_C {:RESULT = dtsRep.obtenerValorJISON("Comentarios", val, null, valleft);:}
+    | RESULT PUNTO COMENTARIOS CORCHETE_A valor:val CORCHETE_C PUNTO TEXTO {:RESULT = dtsRep.obtenerValorJISON("Comentarios", val, "Texto", valleft); dtsRep.setEtiquetaValor("RESULT.Comentarios[" + ultimoID +"].Texto");:}
+;
+
+valor ::=
+    ID:e {:try{ RESULT = Integer.parseInt(dtsRep.obtenerID(e, eleft)); ultimoID = e;}catch(Exception ex){errores.add("Error al obtener valor de ID: "+ e +" en Linea: " + eleft); RESULT = 0;}:}
+    | ENTERO:e {:RESULT = e; ultimoID = String.valueOf(e);:}
+;
+
+
+expresion_string ::=
+           ENTERO:n {: RESULT = n; :}
+        | expresion_string:e1 SUMA:o expresion_string:e2
+                    {: RESULT = e1 + e2; :}
+        | expresion_string:e1 RESTA:o expresion_string:e2
+                    {: RESULT = e1 - e2; :}
+        | expresion_string:e1 MULTIPLICACION:o expresion_string:e2
+                    {: RESULT = e1 * e2; :}
+        | expresion_string:e1 DIVISION:o expresion_string:e2
+                    {: RESULT = e1 / e2;:}
+        | RESTA expresion_string:e
+                    {:RESULT = 0 - e;:}
+        | PARENTESIS_A expresion_string:e PARENTESIS_C
+                    {:RESULT = e;:}
+;
+
+
+

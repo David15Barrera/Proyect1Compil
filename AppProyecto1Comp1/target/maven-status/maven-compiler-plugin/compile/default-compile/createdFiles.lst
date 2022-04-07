@@ -1,0 +1,5 @@
+reporte/analisis/sintactico/parser.class
+reporte/analisis/lexico/LexerReporte.class
+reporte/analisis/sintactico/sym.class
+reporte/analisis/sintactico/parser$CUP$parser$actions.class
+reporte/Simbolo.class

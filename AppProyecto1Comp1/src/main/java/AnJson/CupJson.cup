@@ -1,0 +1,126 @@
+package jison.AnJson;
+
+import java_cup.runtime.Symbol;
+import AnJson.lexico.*;
+import java.util.ArrayList;
+import DatosClass.Json;
+
+parser code
+{:
+
+    private ArrayList<String> errores = new ArrayList<>();
+    private Json jison;
+
+    public void setJson(Json jison) {
+        this.jison = jison;
+    }
+
+    public parser(LexerJISON lexer) {
+            super(lexer);
+    }
+
+    public void setErrores(ArrayList<String> errores) {
+        this.errores = errores;
+    }
+  
+    public void syntax_error(Symbol s) {
+        errores.add("Error Sintactico: Lexema: " + String.valueOf(s.value) + " | Linea: " +  s.left + " | columna: " +  s.right);
+    }
+
+:};
+
+
+terminal SCORE, CLASES, VARIABLES, METODOS, COMENTARIOS, NOMBRE, TIPO, FUNCION, PARAMETROS, TEXTO, DECIMAL, COMILLA,
+        DOS_PUNTOS, LLAVE_A, LLAVE_C, CORCHETE_A, CORCHETE_C, COMA, ERROR;
+
+terminal String ID, COMENTARIO;
+
+terminal Integer ENTERO;
+
+non terminal s, cuerpo, clase, gram_clase, variable, gram_variable, funciones, metodo, gram_metodo, comentario,
+            gram_comentario;
+
+non terminal String identificador;
+
+start with s;
+
+s ::= 
+    LLAVE_A cuerpo LLAVE_C    
+; 
+
+cuerpo ::=
+    SCORE DOS_PUNTOS COMILLA DECIMAL:numero COMILLA COMA {:jison.setScore(numero.toString());:}
+    clase COMA
+    variable COMA
+    metodo COMA
+    comentario
+;
+
+clase ::=
+    CLASES DOS_PUNTOS CORCHETE_A gram_clase CORCHETE_C 
+    | error CORCHETE_A
+;
+
+gram_clase ::=
+    gram_clase COMA LLAVE_A NOMBRE DOS_PUNTOS identificador:var LLAVE_C {:jison.agregarClase(var);:}
+    | LLAVE_A NOMBRE DOS_PUNTOS identificador:var LLAVE_C {:jison.agregarClase(var);:} 
+    | 
+    | error LLAVE_C
+;
+
+variable ::=
+    VARIABLES DOS_PUNTOS CORCHETE_A gram_variable CORCHETE_C 
+    | error CORCHETE_A
+;
+
+gram_variable ::= 
+    gram_variable COMA LLAVE_A NOMBRE DOS_PUNTOS identificador:nombre COMA TIPO DOS_PUNTOS identificador:tipo COMA FUNCION DOS_PUNTOS funciones LLAVE_C {:jison.agregarVariable(nombre, tipo);:}
+    | LLAVE_A NOMBRE DOS_PUNTOS identificador:nombre COMA TIPO DOS_PUNTOS identificador:tipo COMA FUNCION DOS_PUNTOS funciones LLAVE_C {:jison.agregarVariable(nombre, tipo);:}
+    |
+    | error LLAVE_C
+;
+
+funciones ::=
+    funciones COMA identificador:funcion {:jison.agregarFuncion(funcion);:}
+    | identificador:funcion {:jison.agregarFuncion(funcion);:}
+;
+
+identificador ::=
+    COMILLA ID:var COMILLA {:RESULT = var;:}
+    | COMILLA SCORE:var COMILLA {:RESULT = String.valueOf(var);:}
+    | COMILLA CLASES:var COMILLA {:RESULT = String.valueOf(var);:}
+    | COMILLA VARIABLES:var COMILLA {:RESULT = String.valueOf(var);:}
+    | COMILLA METODOS:var COMILLA {:RESULT = String.valueOf(var);:}
+    | COMILLA COMENTARIOS:var COMILLA {:RESULT = String.valueOf(var);:}
+    | COMILLA NOMBRE:var COMILLA {:RESULT = String.valueOf(var);:}
+    | COMILLA TIPO:var COMILLA {:RESULT = String.valueOf(var);:}
+    | COMILLA FUNCION:var COMILLA {:RESULT = String.valueOf(var);:}
+    | COMILLA PARAMETROS:var COMILLA {:RESULT = String.valueOf(var);:}
+    | COMILLA TEXTO:var COMILLA {:RESULT = String.valueOf(var);:}
+;
+gram_metodo ::=
+    gram_metodo COMA LLAVE_A NOMBRE DOS_PUNTOS identificador:nombre COMA TIPO DOS_PUNTOS identificador:tipo COMA PARAMETROS DOS_PUNTOS ENTERO:param LLAVE_C {:jison.agregarMetodo(nombre, tipo, param);:}
+    | LLAVE_A NOMBRE DOS_PUNTOS identificador:nombre COMA TIPO DOS_PUNTOS identificador:tipo COMA PARAMETROS DOS_PUNTOS ENTERO:param LLAVE_C {:jison.agregarMetodo(nombre, tipo, param);:}
+    |
+    | error LLAVE_C
+;
+
+metodo ::=
+    METODOS DOS_PUNTOS CORCHETE_A gram_metodo CORCHETE_C
+    | error CORCHETE_A
+;
+
+gram_comentario ::= 
+    gram_comentario COMA LLAVE_A TEXTO DOS_PUNTOS COMILLA COMENTARIO:com COMILLA LLAVE_C {:jison.agregarComentario(com);:}
+    | gram_comentario COMA LLAVE_A TEXTO DOS_PUNTOS COMILLA COMENTARIO:com LLAVE_C {:jison.agregarComentario(com.substring(0,com.length() -1));:}
+    | LLAVE_A TEXTO DOS_PUNTOS COMILLA COMENTARIO:com COMILLA LLAVE_C {:jison.agregarComentario(com);:}
+    | LLAVE_A TEXTO DOS_PUNTOS COMILLA COMENTARIO:com LLAVE_C {:jison.agregarComentario(com.substring(0,com.length() -1));:}
+    |
+    | error LLAVE_C
+;
+comentario ::=
+    COMENTARIOS DOS_PUNTOS CORCHETE_A gram_comentario CORCHETE_C
+    | error CORCHETE_A
+;
+
+
